@@ -1,0 +1,334 @@
+{% if user.is_authenticated %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raised Requests</title>
+    <link href="{% static 'dashboard/assets/css/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'dashboard/assets/css/light-bootstrap-dashboard.css' %}" rel="stylesheet">
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,700,300" rel="stylesheet">
+    <style>
+        .status-pending, .request-status-pending {
+            color: black;
+            background-color: yellow;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        .status-complete, .request-status-accepted {
+            color: white;
+            background-color: green;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        .status-onhold, .request-status-rejected {
+            color: white;
+            background-color: red;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        .modal-content {
+            border-radius: 10px;
+        }
+        .modal-header {
+            background-color: #f8f9fa;
+        }
+        .modal-body label {
+            font-weight: bold;
+        }
+        .modal-body .btn {
+            margin-right: 5px;
+        }
+        .action-buttons form {
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .action-buttons .btn {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <div class="sidebar" data-color="purple">
+            <div class="sidebar-wrapper">
+                <div class="logo">
+                    <a href="{% url 'dashboard' %}" class="simple-text">Dashboard</a>
+                </div>
+            </div>
+        </div>
+        <div class="main-panel">
+            <nav class="navbar navbar-default navbar-fixed">
+                <div class="container-fluid">
+                    <div class="navbar-header">
+                        <a class="navbar-brand" href="#">Hi {{ user.username }}!</a>
+                    </div>
+                    <ul class="nav navbar-nav navbar-right">
+                        <li><a href="{% url 'logout' %}"><p>Logout</p></a></li>
+                    </ul>
+                </div>
+            </nav>
+            <div class="content">
+                <div class="container-fluid">
+                    <div class="card">
+                        <div class="header">
+                            <h4 class="title">Request History</h4>
+                            <p class="category">View and manage all your requests</p>
+                        </div>
+                        <ul class="nav nav-tabs">
+                            <li class="active"><a data-toggle="tab" href="#shark_tickets">Shark Ticket Requests</a></li>
+                            <li><a data-toggle="tab" href="#db_scale_requests">DB Scale Requests</a></li>
+                        </ul>
+                        <div class="tab-content">
+                            <div id="shark_tickets" class="tab-pane fade in active">
+                                <div class="content table-responsive table-full-width">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Requester</th>
+                                                <th>Priority</th>
+                                                <th>Category</th>
+                                                <th>Summary</th>
+                                                <th>Description</th>
+                                                <th>Attachment</th>
+                                                <th>CC Emails</th>
+                                                <th>Created At</th>
+                                                <th>Status</th>
+                                                {% if user.is_superuser %}
+                                                <th>Action</th>
+                                                {% endif %}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for ticket in shark_tickets %}
+                                            <tr>
+                                                <td>{{ ticket.id }}</td>
+                                                <td>{{ ticket.user.username }}</td>
+                                                <td>{{ ticket.get_ticket_priority_display }}</td>
+                                                <td>{{ ticket.ticket_category }}</td>
+                                                <td>{{ ticket.ticket_subject }}</td>
+                                                <td>{{ ticket.ticket_description }}</td>
+                                                <td>
+                                                    {% if ticket.ticket_attachment %}
+                                                        <a href="{{ ticket.ticket_attachment.url }}" target="_blank">View Attachment</a>
+                                                    {% else %}
+                                                        No Attachment
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ ticket.ticket_em_cc|default:"None" }}</td>
+                                                <td>{{ ticket.created_at }}</td>
+                                                <td>
+                                                    <span class="status-{{ ticket.status|lower }}">{{ ticket.status }}</span>
+                                                </td>
+                                                {% if user.is_superuser %}
+                                                <td>
+                                                    <form action="{% url 'update_ticket_status' ticket.id %}" method="post">
+                                                        {% csrf_token %}
+                                                        <select name="status" onchange="this.form.submit()">
+                                                            <option value="Pending" {% if ticket.status == 'Pending' %}selected{% endif %}>Pending</option>
+                                                            <option value="OnHold" {% if ticket.status == 'OnHold' %}selected{% endif %}>OnHold</option>
+                                                            <option value="InProgress" {% if ticket.status == 'InProgress' %}selected{% endif %}>InProgress</option>
+                                                            <option value="Complete" {% if ticket.status == 'Complete' %}selected{% endif %}>Complete</option>
+                                                        </select>
+                                                    </form>
+                                                </td>
+                                                {% endif %}
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div id="db_scale_requests" class="tab-pane fade">
+                                <div class="content table-responsive table-full-width">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Requester</th>
+                                                <th>University</th>
+                                                <th>Size</th>
+                                                <th>Start Date</th>
+                                                <th>End Date</th>
+                                                <th>Created At</th>
+                                                <th>Status</th>
+                                                {% if user.is_superuser %}
+                                                <th>Actions</th>
+                                                {% endif %}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for request in db_scale_requests %}
+                                            <tr>
+                                                <td>{{ request.id }}</td>
+                                                <td><a href="#" class="show-modal" data-id="{{ request.id }}" data-requester="{{ request.user.username }}" data-university="{{ request.get_university_name_display }}" data-size="{{ request.size }}" data-start-date="{{ request.start_date }}" data-end-date="{{ request.end_date }}" data-status="{{ request.status }}">{{ request.user.username }}</a></td>
+                                                <td><a href="#" class="show-modal" data-id="{{ request.id }}" data-requester="{{ request.user.username }}" data-university="{{ request.get_university_name_display }}" data-size="{{ request.size }}" data-start-date="{{ request.start_date }}" data-end-date="{{ request.end_date }}" data-status="{{ request.status }}">{{ request.get_university_name_display }}</a></td>
+                                                <td>{{ request.size }}</td>
+                                                <td>{{ request.start_date }}</td>
+                                                <td>{{ request.end_date }}</td>
+                                                <td>{{ request.created_at }}</td>
+                                                <td>
+                                                    <span class="request-status-{{ request.status|lower }}">{{ request.status }}</span>
+                                                </td>
+                                                {% if user.is_superuser %}
+                                                <td class="action-buttons">
+                                                    <form action="{% url 'update_request_status' request.id %}" method="post" style="display:inline;">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="status" value="Accepted">
+                                                        <button type="submit" class="btn btn-success btn-fill">Accept</button>
+                                                    </form>
+                                                    <form action="{% url 'update_request_status' request.id %}" method="post" style="display:inline;">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="status" value="Rejected">
+                                                        <button type="submit" class="btn btn-danger btn-fill">Reject</button>
+                                                    </form>
+                                                </td>
+                                                {% endif %}
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Trigger Button for Testing -->
+    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#requestModal">
+        Open Modal Manually
+    </button>
+
+    <!-- Modal -->
+    <div class="modal fade" id="requestModal" tabindex="-1" role="dialog" aria-labelledby="requestModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="requestModalLabel">Request Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">×</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Requester:</label>
+                            <p id="modal-requester"></p>
+                        </div>
+                        <div class="col-md-6">
+                            <label>University:</label>
+                            <p id="modal-university"></p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>Size:</label>
+                            <p id="modal-size"></p>
+                        </div>
+                        <div class="col-md-6">
+                            <label>Start Date:</label>
+                            <p id="modal-start-date"></p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>End Date:</label>
+                            <p id="modal-end-date"></p>
+                        </div>
+                        <div class="col-md-6">
+                            <label>Status:</label>
+                            <p><span id="modal-status" class="request-status-pending"></span></p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <label>Comments:</label>
+                            <textarea id="modal-comments" class="form-control" rows="3" placeholder="No comments yet"></textarea>
+                        </div>
+                    </div>
+                    {% if user.is_superuser %}
+                    <div class="row mt-3">
+                        <div class="col-md-12 action-buttons">
+                            <form id="accept-form" action="" method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="Accepted">
+                                <button type="submit" class="btn btn-success btn-fill">Approved</button>
+                            </form>
+                            <form id="reject-form" action="" method="post" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="status" value="Rejected">
+                                <button type="submit" class="btn btn-danger btn-fill">Rejected</button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <script>
+        console.log('Script loaded');
+        $(document).ready(function() {
+            console.log('DOM ready, checking for .show-modal');
+            if ($('.show-modal').length) {
+                console.log('Found ' + $('.show-modal').length + ' .show-modal elements, binding click event');
+                $('.show-modal').on('click', function(e) {
+                    e.preventDefault();
+                    console.log('Modal trigger clicked for ID:', $(this).data('id'));
+                    var id = $(this).data('id');
+                    var requester = $(this).data('requester');
+                    var university = $(this).data('university');
+                    var size = $(this).data('size');
+                    var startDate = $(this).data('start-date');
+                    var endDate = $(this).data('end-date');
+                    var status = $(this).data('status');
+
+                    // Populate modal fields
+                    $('#modal-requester').text(requester || '');
+                    $('#modal-university').text(university || '');
+                    $('#modal-size').text(size || '');
+                    $('#modal-start-date').text(startDate || '');
+                    $('#modal-end-date').text(endDate || '');
+                    $('#modal-status').text(status || '').removeClass().addClass('request-status-' + (status || 'pending').toLowerCase());
+                    $('#modal-comments').val(''); // Clear comments
+
+                    // Generate URL template safely
+                    var baseUrl = "{% url 'update_request_status' 0 %}";
+                    var urlTemplate = baseUrl.replace('0', id);
+                    console.log('Generated URL Template:', urlTemplate);
+
+                    // Update form actions with the correct request_id
+                    if ($('#accept-form').length) {
+                        $('#accept-form').attr('action', urlTemplate);
+                    }
+                    if ($('#reject-form').length) {
+                        $('#reject-form').attr('action', urlTemplate);
+                    }
+
+                    // Show the modal
+                    console.log('Attempting to show modal');
+                    $('#requestModal').modal('show');
+                });
+            } else {
+                console.log('No .show-modal elements found');
+            }
+        });
+    </script>
+</body>
+</html>
+{% else %}
+<a href="{% url 'login' %}">Login</a>
+{% endif %}

@@ -5,16 +5,14 @@ from django.contrib.auth.decorators import login_required
 
 from .models import RequestForm, TicketForm
 from django.contrib import messages
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 from django.http import HttpResponse, HttpResponseRedirect
 from django.template import loader
 from django.utils import timezone
 from django.shortcuts import render
 from .models import Project
 from django.contrib.auth.models import User
-from .models import UniversityRequestForm
-from django.forms import formset_factory
-from .models import Ticket, UniversityRequest
+
 
 import datetime
 
@@ -127,7 +125,6 @@ def raise_ticket(request):
 
     return render(request, 'dashboard/ticket-home.html', {'ticket_form': ticket_form})
 
-
 @login_required(login_url='/login/')
 def university_request(request):
     UniversityRequestFormSet = formset_factory(UniversityRequestForm, extra=1)  # Start with 1 form
@@ -140,47 +137,8 @@ def university_request(request):
                     university_request = form.save(commit=False)
                     university_request.user = request.user
                     university_request.save()
-            return redirect('thanks')  # Redirect to dashboard after submission
+            return redirect('dashboard')  # Redirect to dashboard after submission
     else:
         formset = UniversityRequestFormSet()
 
     return render(request, 'dashboard/university_request.html', {'formset': formset})
-
-def raised_requests(request):
-    if request.user.is_superuser:
-        shark_tickets = Ticket.objects.all()    # If the user is an admin, fetch all tickets
-        db_scale_requests = UniversityRequest.objects.all()
-    else:
-        shark_tickets = Ticket.objects.filter(user=request.user)
-        db_scale_requests = UniversityRequest.objects.filter(user=request.user)
-    context = {
-        'shark_tickets': shark_tickets,
-        'db_scale_requests': db_scale_requests
-    }
-    
-    return render(request, 'dashboard/raised_requests.html', context)
-
-@login_required(login_url='/login/')
-def update_ticket_status(request, ticket_id):
-    ticket = get_object_or_404(Ticket, id=ticket_id)
-    if not request.user.is_superuser:
-        return redirect('raised_requests')  # Redirect if not a superuser
-    if request.method == 'POST':
-        new_status = request.POST.get('status')
-        if new_status in dict(Ticket.STATUS_CHOICES).keys():
-            ticket.status = new_status
-            ticket.save()
-    return redirect('raised_requests')
-
-@login_required(login_url='/login/')
-def update_request_status(request, request_id):
-    university_request = get_object_or_404(UniversityRequest, id=request_id)
-    if not request.user.is_superuser:
-        return redirect('raised_requests')  # Redirect if not a superuser
-    if request.method == 'POST':
-        new_status = request.POST.get('status')
-        if new_status in dict(UniversityRequest.STATUS_CHOICES).keys():
-            university_request.status = new_status
-            university_request.save()
-    return redirect('raised_requests')
-

@@ -26,7 +26,12 @@ SECRET_KEY = 'dc=^7s9u$q*=g5sur3k8#wd$u^rvgx#dc^d4!oar#ck+i&fz6b'
 DEBUG = True
 
 ALLOWED_HOSTS = ['*']
+#media
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# Ensure this is present
+STATIC_URL = '/static/'
 
 # Application definition
 

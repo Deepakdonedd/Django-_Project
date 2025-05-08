@@ -10,7 +10,8 @@ from django.contrib import admin
 from .models import Project
 #from jenkinsapi.jenkins import Jenkins
 import jenkins
-
+from .models import Ticket
+from .models import UniversityRequest
 
 def create_mysql(modeladmin, request, queryset):
     for query in queryset:
@@ -113,3 +114,5 @@ class ProjectAdmin(admin.ModelAdmin):
     actions = [create_mysql,trigger_jenkins, ]
 
 admin.site.register(Project, ProjectAdmin)
+admin.site.register(Ticket)
+admin.site.register(UniversityRequest)

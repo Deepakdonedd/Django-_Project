@@ -75,7 +75,7 @@
 	       </li>-->
 
                 <li class="active">
-                    <a href="{% url 'raise_ticket' %}">
+                    <a href="#" id="load-raise-ticket">
 			<i class="pe-7s-note2"></i>
     			<p>Raise Ticket</p>
                     </a>
@@ -88,19 +88,6 @@
                     </a>
                 </li>
                 
-                <li class="active">
-                    <a href="{% url 'dashboard' %}">
-                        <i class="pe-7s-note2"></i>
-                        <p>Service Onboarding Request</p>
-                    </a>
-                </li>
-
-                <li class="active">
-                    <a href="{% url 'raised_requests' %}">
-                        <i class="pe-7s-note2"></i>
-		       <p>Raised Request</p>
-                    </a>
-                </li>
 
                 <!--<li>
 
@@ -533,6 +520,53 @@
 
     </div>
 </div>
+
+<script>
+    $(document).ready(function() {
+        // Load the Raise Ticket form inside the content area
+        $("#load-raise-ticket").click(function(e) {
+            e.preventDefault(); // Prevent default link behavior
+
+            $.ajax({
+                url: "{% url 'raise_ticket' %}",
+                type: "GET",
+                success: function(response) {
+                    $("#ticket-form-container").html(response.form_html); // Load form into div
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error loading form:", error);
+                }
+            });
+        });
+
+        // Handle Raise Ticket form submission via AJAX
+        $(document).on("submit", "#raise-ticket-form", function(e) {
+            e.preventDefault(); // Prevent normal form submission
+
+            var formData = new FormData(this);
+
+            $.ajax({
+                url: "{% url 'raise_ticket' %}",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    alert("Ticket successfully created!");
+                    $("#ticket-form-container").html(""); // Clear form after success
+                },
+                error: function(xhr) {
+                    var errors = xhr.responseJSON.errors;
+                    var errorMsg = "Error submitting form:\n";
+                    for (var key in errors) {
+                        errorMsg += key + ": " + errors[key] + "\n";
+                    }
+                    alert(errorMsg);
+                }
+            });
+        });
+    });
+</script>
 
 </body>
 
