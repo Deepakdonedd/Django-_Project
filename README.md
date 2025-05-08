@@ -1,1 +1,1 @@
-# upGrad DevOps S2P
+# Django Project
